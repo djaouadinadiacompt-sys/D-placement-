@@ -23,76 +23,30 @@
       width: 100%;
       max-width: 460px;
     }
-    h1 {
-      font-size: 1.4rem;
-      color: #1a202c;
-      margin-bottom: 28px;
-      text-align: center;
-      font-weight: 700;
-    }
+    h1 { font-size: 1.4rem; color: #1a202c; margin-bottom: 28px; text-align: center; font-weight: 700; }
     .champ { margin-bottom: 20px; }
-    label {
-      display: block;
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: #4a5568;
-      margin-bottom: 6px;
-    }
+    label { display: block; font-size: 0.85rem; font-weight: 600; color: #4a5568; margin-bottom: 6px; }
     input, select {
-      width: 100%;
-      padding: 10px 14px;
-      border: 1.5px solid #cbd5e0;
-      border-radius: 8px;
-      font-size: 1rem;
-      color: #2d3748;
-      background: #f7fafc;
-      transition: border-color 0.2s;
-      appearance: none;
+      width: 100%; padding: 10px 14px; border: 1.5px solid #cbd5e0;
+      border-radius: 8px; font-size: 1rem; color: #2d3748;
+      background: #f7fafc; transition: border-color 0.2s; appearance: none;
     }
-    input:focus, select:focus {
-      outline: none;
-      border-color: #4299e1;
-      background: white;
-    }
-    .tarif-affiche {
-      margin-top: 8px;
-      font-size: 0.9rem;
-      color: #2b6cb0;
-      font-weight: 600;
-      min-height: 20px;
-    }
+    input:focus, select:focus { outline: none; border-color: #4299e1; background: white; }
+    .tarif-affiche { margin-top: 8px; font-size: 0.9rem; color: #2b6cb0; font-weight: 600; min-height: 20px; }
     button {
-      width: 100%;
-      padding: 12px;
-      background: #3182ce;
-      color: white;
-      font-size: 1rem;
-      font-weight: 600;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      margin-top: 8px;
-      transition: background 0.2s;
+      width: 100%; padding: 12px; background: #3182ce; color: white;
+      font-size: 1rem; font-weight: 600; border: none; border-radius: 8px;
+      cursor: pointer; margin-top: 8px; transition: background 0.2s;
     }
     button:hover:not(:disabled) { background: #2b6cb0; }
     button:disabled { background: #a0aec0; cursor: not-allowed; }
     .message {
-      margin-top: 18px;
-      padding: 12px 16px;
-      border-radius: 8px;
-      font-size: 0.92rem;
-      text-align: center;
-      display: none;
+      margin-top: 18px; padding: 12px 16px; border-radius: 8px;
+      font-size: 0.92rem; text-align: center; display: none;
     }
     .message.succes { background: #c6f6d5; color: #276749; display: block; }
     .message.erreur { background: #fed7d7; color: #9b2c2c; display: block; }
-    .chargement {
-      text-align: center;
-      color: #718096;
-      font-size: 0.9rem;
-      margin-bottom: 12px;
-      display: none;
-    }
+    .chargement { text-align: center; color: #718096; font-size: 0.9rem; margin-bottom: 12px; display: none; }
   </style>
 </head>
 <body>
@@ -116,7 +70,6 @@
 
 <script>
   var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzYmuLsCKDnNXbPw4oVbJdz6WrzmQbT7dBBaWX_agLM6D02cp_FKHTs9_QBl2iLtHM/exec";
-
   var destinations = [];
 
   document.getElementById("date").valueAsDate = new Date();
@@ -139,13 +92,13 @@
 
   function chargerDestinations() {
     document.getElementById("chargement").style.display = "block";
-    var script = document.createElement("script");
-    script.src = SCRIPT_URL + "?action=destinations&callback=recevoirDestinations";
-    script.onerror = function() {
-      afficherMessage("Impossible de charger les destinations.", "erreur");
-      document.getElementById("chargement").style.display = "none";
-    };
-    document.body.appendChild(script);
+    fetch(SCRIPT_URL + "?action=destinations")
+      .then(function(r) { return r.json(); })
+      .then(function(data) { recevoirDestinations(data); })
+      .catch(function() {
+        afficherMessage("Impossible de charger les destinations.", "erreur");
+        document.getElementById("chargement").style.display = "none";
+      });
   }
 
   function recevoirDestinations(data) {
@@ -171,19 +124,21 @@
     var btn = document.getElementById("btn-enregistrer");
     btn.disabled = true;
     btn.textContent = "Enregistrement…";
-    var script = document.createElement("script");
-    script.src = SCRIPT_URL
+
+    var url = SCRIPT_URL
       + "?action=enregistrer"
-      + "&callback=recevoirReponse"
       + "&date=" + encodeURIComponent(date)
       + "&destination=" + encodeURIComponent(destination)
       + "&tarif=" + encodeURIComponent(dest.tarif);
-    script.onerror = function() {
-      afficherMessage("Erreur réseau, veuillez réessayer.", "erreur");
-      btn.disabled = false;
-      btn.textContent = "Enregistrer";
-    };
-    document.body.appendChild(script);
+
+    fetch(url)
+      .then(function(r) { return r.json(); })
+      .then(function(data) { recevoirReponse(data); })
+      .catch(function() {
+        afficherMessage("Erreur réseau, veuillez réessayer.", "erreur");
+        btn.disabled = false;
+        btn.textContent = "Enregistrer";
+      });
   }
 
   function recevoirReponse(data) {
