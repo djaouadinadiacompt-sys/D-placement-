@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Enregistrement des courses</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .carte {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+      padding: 36px 32px;
+      width: 100%;
+      max-width: 460px;
+    }
+    h1 {
+      font-size: 1.4rem;
+      color: #1a202c;
+      margin-bottom: 28px;
+      text-align: center;
+      font-weight: 700;
+    }
+    .champ { margin-bottom: 20px; }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #4a5568;
+      margin-bottom: 6px;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1.5px solid #cbd5e0;
+      border-radius: 8px;
+      font-size: 1rem;
+      color: #2d3748;
+      background: #f7fafc;
+      transition: border-color 0.2s;
+      appearance: none;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: #4299e1;
+      background: white;
+    }
+    .tarif-affiche {
+      margin-top: 8px;
+      font-size: 0.9rem;
+      color: #2b6cb0;
+      font-weight: 600;
+      min-height: 20px;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #3182ce;
+      color: white;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.2s;
+    }
+    button:hover:not(:disabled) { background: #2b6cb0; }
+    button:disabled { background: #a0aec0; cursor: not-allowed; }
+    .message {
+      margin-top: 18px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.92rem;
+      text-align: center;
+      display: none;
+    }
+    .message.succes { background: #c6f6d5; color: #276749; display: block; }
+    .message.erreur { background: #fed7d7; color: #9b2c2c; display: block; }
+    .chargement {
+      text-align: center;
+      color: #718096;
+      font-size: 0.9rem;
+      margin-bottom: 12px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+<div class="carte">
+  <h1>🚗 Enregistrement d'une course</h1>
+  <div class="chargement" id="chargement">Chargement des destinations…</div>
+  <div class="champ">
+    <label for="date">Date</label>
+    <input type="date" id="date" />
+  </div>
+  <div class="champ">
+    <label for="destination">Destination</label>
+    <select id="destination">
+      <option value="">— Choisir une destination —</option>
+    </select>
+    <div class="tarif-affiche" id="tarif-affiche"></div>
+  </div>
+  <button id="btn-enregistrer" disabled>Enregistrer</button>
+  <div class="message" id="message"></div>
+</div>
+
+<script>
+  var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzYmuLsCKDnNXbPw4oVbJdz6WrzmQbT7dBBaWX_agLM6D02cp_FKHTs9_QBl2iLtHM/exec";
+
+  var destinations = [];
+
+  document.getElementById("date").valueAsDate = new Date();
+  chargerDestinations();
+
+  document.getElementById("destination").addEventListener("change", function() {
+    var nom = this.value;
+    var dest = destinations.find(function(d) { return d.nom === nom; });
+    if (dest) {
+      document.getElementById("tarif-affiche").textContent = "Tarif : " + dest.tarif + " DA";
+      verifierFormulaire();
+    } else {
+      document.getElementById("tarif-affiche").textContent = "";
+      document.getElementById("btn-enregistrer").disabled = true;
+    }
+  });
+
+  document.getElementById("date").addEventListener("change", verifierFormulaire);
+  document.getElementById("btn-enregistrer").addEventListener("click", enregistrer);
+
+  function chargerDestinations() {
+    document.getElementById("chargement").style.display = "block";
+    var script = document.createElement("script");
+    script.src = SCRIPT_URL + "?action=destinations&callback=recevoirDestinations";
+    script.onerror = function() {
+      afficherMessage("Impossible de charger les destinations.", "erreur");
+      document.getElementById("chargement").style.display = "none";
+    };
+    document.body.appendChild(script);
+  }
+
+  function recevoirDestinations(data) {
+    document.getElementById("chargement").style.display = "none";
+    destinations = data;
+    var select = document.getElementById("destination");
+    data.forEach(function(d) {
+      var opt = document.createElement("option");
+      opt.value = d.nom;
+      opt.textContent = d.nom + " — " + d.tarif + " DA";
+      select.appendChild(opt);
+    });
+  }
+
+  function enregistrer() {
+    var date        = document.getElementById("date").value;
+    var destination = document.getElementById("destination").value;
+    var dest        = destinations.find(function(d) { return d.nom === destination; });
+    if (!date || !destination || !dest) {
+      afficherMessage("Veuillez remplir tous les champs.", "erreur");
+      return;
+    }
+    var btn = document.getElementById("btn-enregistrer");
+    btn.disabled = true;
+    btn.textContent = "Enregistrement…";
+    var script = document.createElement("script");
+    script.src = SCRIPT_URL
+      + "?action=enregistrer"
+      + "&callback=recevoirReponse"
+      + "&date=" + encodeURIComponent(date)
+      + "&destination=" + encodeURIComponent(destination)
+      + "&tarif=" + encodeURIComponent(dest.tarif);
+    script.onerror = function() {
+      afficherMessage("Erreur réseau, veuillez réessayer.", "erreur");
+      btn.disabled = false;
+      btn.textContent = "Enregistrer";
+    };
+    document.body.appendChild(script);
+  }
+
+  function recevoirReponse(data) {
+    var btn = document.getElementById("btn-enregistrer");
+    btn.textContent = "Enregistrer";
+    if (data.status === "OK") {
+      afficherMessage("✅ Course enregistrée avec succès !", "succes");
+      document.getElementById("destination").value = "";
+      document.getElementById("tarif-affiche").textContent = "";
+      btn.disabled = true;
+    } else {
+      afficherMessage("❌ Erreur : " + (data.error || "inconnue"), "erreur");
+      btn.disabled = false;
+    }
+  }
+
+  function verifierFormulaire() {
+    var date = document.getElementById("date").value;
+    var dest = document.getElementById("destination").value;
+    document.getElementById("btn-enregistrer").disabled = !(date && dest);
+  }
+
+  function afficherMessage(texte, type) {
+    var el = document.getElementById("message");
+    el.textContent = texte;
+    el.className = "message " + type;
+    setTimeout(function() { el.className = "message"; }, 4000);
+  }
+</script>
+</body>
+</html>
